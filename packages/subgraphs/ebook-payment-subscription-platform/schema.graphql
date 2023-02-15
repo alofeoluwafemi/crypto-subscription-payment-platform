@@ -1,0 +1,22 @@
+type Plan @entity(immutable: true) {
+  id: Bytes!
+  plan: Int!
+  price: BigInt!
+  duration: BigInt!
+  subscriptions: [SubscriptionP!]! @derivedFrom(field: "plan")
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: Bytes!
+}
+
+
+type SubscriptionP @entity(immutable: true) {
+  id: Bytes!
+  subscriber: Bytes! # address
+  plan: Plan!
+  nextCharge: BigInt!
+  endDate: BigInt!
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: Bytes!
+}
