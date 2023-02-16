@@ -146,7 +146,7 @@ contract PaymentSubscription is Pausable, Ownable {
         );
 
         require(
-            IERC20(subscriptionToken).allowance(msg.sender, address(this)) >=
+            IERC20(subscriptionToken).allowance(subscriber, address(this)) >=
                 subscriptions[subscriber].price,
             "Insufficient allowance"
         );

@@ -26,9 +26,9 @@ const ABI = [
     }
 ];
 
-exports.main = async function(signer, recipient, contractAddress) {
+exports.main = async function (provider, signer, contractAddress) {
     const QueryUrl =
-        'https://api.thegraph.com/subgraphs/name/alofeoluwafemi/payment-subscription-v4';
+        'https://api.thegraph.com/subgraphs/name/alofeoluwafemi/ebook-subscription-platform';
 
     const currentTime = (await ethers.getDefaultProvider().getBlock())
         .timestamp;
@@ -45,26 +45,32 @@ exports.main = async function(signer, recipient, contractAddress) {
     const result = await request(QueryUrl, query);
     const { subscriptionPs } = result;
 
-    console.log(subscriptionPs);
+    console.log('Due subscriptions: ', subscriptionPs);
 
-    const provider = new ethers.providers.JsonRpcProvider(
-        'https://alfajores-forno.celo-testnet.org'
-    );
+    const sender = await signer.getAddress();
     const paymentSubscription = new ethers.Contract(
         contractAddress,
         ABI,
-        signer,
-        provider
+        signer
     );
 
-    subscriptionPs.forEach(async element => {
+    subscriptionPs.forEach(async (element) => {
+        console.log(sender.address);
         try {
-            const gasLimit = await paymentSubscription.estimateGas.charge(
-                element.subscriber
-            );
+            const gasLimit = await provider.estimateGas({
+                to: contractAddress,
+                from: sender,
+                data: paymentSubscription.interface.encodeFunctionData(
+                    'charge',
+                    [element.subscriber]
+                )
+            });
+
             const res = await paymentSubscription.charge(element.subscriber, {
                 gasLimit: gasLimit
             });
+
+            console.log(res);
         } catch (error) {
             console.log(error.reason != undefined ? error.reason : error);
         }
@@ -72,14 +78,15 @@ exports.main = async function(signer, recipient, contractAddress) {
 };
 
 // Entrypoint for the Autotask
-exports.handler = async function(credentials) {
+exports.handler = async function (credentials) {
     // Initialize defender relayer provider and signer
     const provider = new DefenderRelayProvider(credentials);
     const signer = new DefenderRelaySigner(credentials, provider, {
         speed: 'fast'
     });
     const contractAddress = '0x95BD5b1B16C586025bF0750c21bd1de433de8D4c'; // PaymentSubscription contract address
-    return exports.main(signer, await signer.getAddress(), contractAddress); // Charge due subscriptions
+
+    return exports.main(provider, signer, contractAddress); // Charge due subscriptions
 };
 
 // To run locally (this code will not be executed in Autotasks)
@@ -87,11 +94,10 @@ if (require.main === module) {
     exports
         .handler({
             apiKey: '',
-            apiSecret:
-                ''
+            apiSecret: ''
         })
         // .then(() => process.exit(0))
-        .catch(error => {
+        .catch((error) => {
             console.error(error);
             process.exit(1);
         });
